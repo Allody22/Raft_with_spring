@@ -14,8 +14,10 @@ import java.util.Map;
 @Component
 @ConfigurationProperties(prefix = "raft")
 public class RaftConfig {
-    private String nodeId;
-    private List<String> peers;
+    private Integer nodeId;
+    private List<Integer> peers;
     private int clientPort;
-    private Map<String, Integer> nodeClientPorts = new HashMap<>();
+    private Map<Integer, Integer> nodeClientPorts = new HashMap<>();
+    private int electionTimeout;
+    private int heartBeatTimeout;
 }
