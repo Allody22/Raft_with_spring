@@ -28,11 +28,14 @@ public class Attributes {
     private Integer id;
 
     @Getter
+    private volatile Integer leaderId = null;
+
+    @Getter
     Boolean active = true;
 
     public void setActive(Boolean active) {
         this.active = active;
-        log.info("Peer #{} {}", getId(),active?"STARTED":"STOPPED");
+        log.info("Peer #{} {}", getId(), active ? "STARTED" : "STOPPED");
     }
 
     @Getter
@@ -43,7 +46,7 @@ public class Attributes {
 
     public void setVotedFor(Integer votedFor) {
         this.votedFor = votedFor;
-        log.debug("Peer #{} set voted for {}", getId(),votedFor);
+        log.debug("Peer #{} set voted for {}", getId(), votedFor);
     }
 
     private final AtomicInteger commitIndex = new AtomicInteger(-1);
@@ -56,8 +59,15 @@ public class Attributes {
     Integer heartBeatTimeout;
 
     public void setState(State state) {
-        log.info("Узел #{} обновляет своё состояние до: {}", getId(), state);
-         this.state = state;
+        if (state != this.state) {
+            log.info("Узел #{} обновляет своё состояние до: {}", getId(), state);
+        }
+        this.state = state;
+    }
+
+
+    public void setLeaderId(Integer leaderId) {
+        this.leaderId = leaderId;
     }
 
     public Integer getCommitIndex() {
@@ -80,6 +90,6 @@ public class Attributes {
 
     public void cancelIfNotActive() {
         if (!getActive())
-            throw  new NotActiveException();
+            throw new NotActiveException();
     }
 }

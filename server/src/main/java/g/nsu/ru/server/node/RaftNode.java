@@ -37,7 +37,7 @@ public class RaftNode {
         attributes.setId(raftConfig.getNodeId());
         attributes.setElectionTimeout(raftConfig.getElectionTimeout());
         attributes.setHeartBeatTimeout(raftConfig.getHeartBeatTimeout());
-
+        setActive(true);
         // Добавляем peers и настраиваем кворум
         for (Integer peerId : raftConfig.getPeers()) {
             peers.add(peerId);
@@ -67,6 +67,14 @@ public class RaftNode {
 
     public void setState(State state) {
         attributes.setState(state);
+    }
+
+    public void setLeaderId(Integer leaderId) {
+        attributes.setLeaderId(leaderId);
+    }
+
+    public Integer getLeaderId() {
+        return attributes.getLeaderId();
     }
 
     public Long getCurrentTerm() {
@@ -126,7 +134,7 @@ public class RaftNode {
     }
 
     public void setTermGreaterThenCurrent(Long term) {
-        log.info("Peer #{} Get term {} greater then current. The current term is {}", getId(),term,getCurrentTerm());
+        log.info("Узел #{} получил терм {} больше чем текущий. текущий терм {}", getId(),term,getCurrentTerm());
         setState(FOLLOWER);
         setCurrentTerm(term);
         setVotedFor(null);

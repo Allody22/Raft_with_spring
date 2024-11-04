@@ -5,22 +5,24 @@ import g.nsu.ru.server.node.Attributes;
 import g.nsu.ru.server.services.ReplicationService;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import static g.nsu.ru.server.model.State.LEADER;
 
 
 @Service
-class HeartBeatTimerImpl extends RaftTimer {
+public class HeartBeatTimer extends RaftTimer {
 
 
     private final ReplicationService replicationService;
 
-    protected HeartBeatTimerImpl(Attributes attributes, ReplicationService replicationService) {
+    protected HeartBeatTimer(Attributes attributes, ReplicationService replicationService) {
         super(attributes);
         this.replicationService = replicationService;
     }
 
     protected Integer getTimeout() {
-        return attributes.getHeartBeatTimeout();
+        return ThreadLocalRandom.current().nextInt(10, attributes.getHeartBeatTimeout());
     }
 
     protected String getActionName() {
@@ -32,8 +34,6 @@ class HeartBeatTimerImpl extends RaftTimer {
     }
 
     protected boolean isRun() {
-            return attributes.getActive() && attributes.getState().equals(LEADER);
+        return attributes.getActive() && attributes.getState().equals(LEADER);
     }
-
-
 }

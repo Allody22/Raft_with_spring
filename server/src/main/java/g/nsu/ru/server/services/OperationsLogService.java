@@ -25,6 +25,13 @@ public class OperationsLogService {
     private final Term term;
     private final ApplicationEventPublisher applicationEventPublisher;
 
+    public String getLeaderUrl() {
+        Integer leaderId = attributes.getLeaderId();
+        if (leaderId != null) {
+            return "http://localhost:800" + leaderId;
+        }
+        throw new IllegalStateException("Лидер не определён");
+    }
 
     public void insert(Entry entry) {
         appendToLog(INSERT, entry);
@@ -42,6 +49,11 @@ public class OperationsLogService {
         return operationsLog.all();
     }
 
+
+    public List<Operation> allValues() {
+        return operationsLog.all();
+    }
+
     private void appendToLog(OperationType type, Entry entry) {
         log.info("Узел #{} добавил новый лог. {}. key:{} val:{}", attributes.getId(),type,entry.getKey(),entry.getVal());
         attributes.cancelIfNotActive();
@@ -52,4 +64,16 @@ public class OperationsLogService {
         operationsLog.append(operation);
         applicationEventPublisher.publishEvent(new OperationsLogAppendedEvent(this));
     }
+
+    public void deactivateLeader() {
+        if (attributes.getState().equals(State.LEADER)) {
+            log.info("Узел #{} больше не лидер, переводим его в фоловера.", attributes.getId());
+            attributes.setState(State.FOLLOWER);
+            attributes.setLeaderId(null);
+            attributes.setVotedFor(null);
+        } else {
+            throw new NotLeaderException("Узел не является лидером и не может быть деактивирован таким образом.");
+        }
+    }
+
 }

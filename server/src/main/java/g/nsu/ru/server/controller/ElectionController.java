@@ -3,7 +3,6 @@ package g.nsu.ru.server.controller;
 import g.nsu.ru.server.model.election.AnswerVoteDTO;
 import g.nsu.ru.server.model.election.RequestVoteDTO;
 import g.nsu.ru.server.services.ElectionService;
-import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -25,14 +24,12 @@ class ElectionController {
     private final ElectionService electionService;
 
     @PostMapping("/vote")
-    @ApiOperation(value = "Request vote")
     public AnswerVoteDTO voteDTO(@RequestBody RequestVoteDTO requestVoteDTO,
                                  BindingResult bindingResult) throws BindException {
-        log.info("START ELECTION");
         if (bindingResult.hasErrors()) {
+            log.error("Какой-то байндинг result в election/vote");
             throw new BindException(bindingResult);
         }
         return electionService.vote(requestVoteDTO);
     }
-
 }

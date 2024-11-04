@@ -3,10 +3,10 @@ package g.nsu.ru.server.exceptions;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseStatus(code = HttpStatus.SERVICE_UNAVAILABLE, reason = "Server is not in active mode")
+@ResponseStatus(code = HttpStatus.SERVICE_UNAVAILABLE, reason = "Что-то не так работает")
 public class NotActiveException extends RuntimeException {
 
     public NotActiveException() {
-        super("Sorry. I am not on duty today :(");
+        super("Эта нода сейчас не активна ");
     }
 }

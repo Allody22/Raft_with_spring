@@ -3,10 +3,14 @@ package g.nsu.ru.server.exceptions;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseStatus(code = HttpStatus.BAD_REQUEST, reason = "Server is not in LEADER mode")
+@ResponseStatus(code = HttpStatus.BAD_REQUEST, reason = "Этот сервер не лидер")
 public class NotLeaderException extends RuntimeException {
 
     public NotLeaderException() {
-        super("Sorry. I am not on duty today :(");
+        super("Это не лидер");
+    }
+
+    public NotLeaderException(String message) {
+        super(message);
     }
 }

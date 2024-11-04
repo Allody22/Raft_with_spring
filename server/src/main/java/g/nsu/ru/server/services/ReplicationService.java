@@ -1,5 +1,7 @@
 package g.nsu.ru.server.services;
 
+import g.nsu.ru.server.model.AnswerAppendDTO;
+import g.nsu.ru.server.model.RequestAppendDTO;
 import g.nsu.ru.server.model.operations.Operation;
 import g.nsu.ru.server.model.operations.OperationsLogInMemory;
 import g.nsu.ru.server.node.Peer;
@@ -34,16 +36,16 @@ public class ReplicationService {
     private final RestTemplate restTemplate;
 
     private final RaftNode raftNode;
+
     private final ApplicationEventPublisher applicationEventPublisher;
+
     private final OperationsLogInMemory operationsLog;
-
-
 
     private List<AnswerAppendDTO> sendAppendToAllPeers(List<Integer> peers) {
         List<CompletableFuture<AnswerAppendDTO>> answerFutureList =
                 peers.stream()
                         .map(this::sendAppendForOnePeer)
-                        .collect(Collectors.toList());
+                        .toList();
 
         return CompletableFuture.allOf(
                 answerFutureList.toArray(new CompletableFuture[0])
@@ -59,8 +61,6 @@ public class ReplicationService {
 
                 Peer peer = raftNode.getPeer(id);
 
-                // Если индекс последней операции ≥ nextIndex для follower: отправить
-                // AppendEntries RPC с операциями, начиная с nextIndex
                 Operation operation;
                 Integer prevIndex;
                 if (peer.getNextIndex() <= operationsLog.getLastIndex()) {
@@ -88,10 +88,10 @@ public class ReplicationService {
 
                 return Optional.ofNullable(response.getBody()).orElse(new AnswerAppendDTO(id, NO_CONTENT));
             } catch (ResourceAccessException e) {
-                log.error("Узел #{} ошибка {} запроса узлу {}. {} {}", raftNode.getId(), opNameForLog, id, e.getClass(), e.getMessage());
+//                log.error("Узел #{} ошибка {} запроса узлу {}. {} {}", raftNode.getId(), opNameForLog, id, e.getClass(), e.getMessage());
                 return new AnswerAppendDTO(id, SERVICE_UNAVAILABLE);
             } catch (Exception e) {
-                log.error(String.format("Узел # %d ошибка %s запроса узлу %d", raftNode.getId(), opNameForLog, id), e);
+//                log.error(String.format("Узел # %d ошибка %s запроса узлу %d", raftNode.getId(), opNameForLog, id), e);
                 return new AnswerAppendDTO(id, INTERNAL_SERVER_ERROR);
             }
         });
@@ -156,38 +156,33 @@ public class ReplicationService {
 
         // Reply false if term < currentTerm (§5.1)
         if (dto.getTerm() < raftNode.getCurrentTerm()) {
-            log.info("Peer #{} Rejected request from {}. Term {} too small", raftNode.getId(), dto.getLeaderId(),
-                    dto.getTerm());
+            log.info("Узел #{} отклонил запрос от {}. Терм {} меньше чем у узла {}", raftNode.getId(), dto.getLeaderId(),
+                    dto.getTerm(), raftNode.getCurrentTerm());
             return new AnswerAppendDTO(raftNode.getId(), raftNode.getCurrentTerm(), false, null);
         } else if (dto.getTerm() > raftNode.getCurrentTerm()) {
-            //If RPC request or response contains term T > currentTerm: set currentTerm = T,
             raftNode.setCurrentTerm(dto.getTerm());
             raftNode.setVotedFor(null);
         }
         applicationEventPublisher.publishEvent(new ResetElectionTimerEvent(this));
-        // convert to follower. Just one Leader RULE
+        // Если ты почему-то не фолловер, то ты им станешь
         if (!raftNode.getState().equals(FOLLOWER)) {
+            log.info("\u001b[33mУзел {} в аппенде стал фолловером\u001b[om", raftNode.getId());
             raftNode.setState(FOLLOWER);
         }
 
-//        2. Reply false if operations does not contain an entry at prevLogIndex
-//        whose term matches prevLogTerm (§5.3)
         if ((dto.getPrevLogIndex() > operationsLog.getLastIndex()) ||
                 !dto.getPrevLogTerm().equals(operationsLog.getTerm(dto.getPrevLogIndex()))) {
-            log.info(
-                    "Peer #{} Rejected request from {}. Log doesn't contain prev term. Current term {}, Candidate term {} ",
+            log.info("Узел {} не понял запрос от лидера {}. Лог не содержит предыдущий терм. Текущий терм {}, Терм из запроса {} ",
                     raftNode.getId(), dto.getLeaderId(), raftNode.getCurrentTerm(), dto.getTerm());
             return new AnswerAppendDTO(raftNode.getId(), raftNode.getCurrentTerm(), false, null);
         }
 
-
-        String opNameForLog = "heartbeat";
         Operation newOperation = dto.getOperation();
+        //Если не хартбит
         if (newOperation != null) {
 
-            opNameForLog = "append";
             int newOperationIndex = dto.getPrevLogIndex() + 1;
-            log.info("Peer #{} checking new operation. New index {}. Operation term: {}. Last index: {} ",
+            log.info("Узел #{} получает новую операцию и индекс. Новый индекс {}. Терм операции: {}. Прошлый индекс: {} ",
                     raftNode.getId(), newOperationIndex, newOperation.getTerm(), operationsLog.getLastIndex());
 
             synchronized (this) {
@@ -198,12 +193,11 @@ public class ReplicationService {
                     operationsLog.removeAllFromIndex(newOperationIndex);
                 }
 //        4. Append any new entries not already in the operations
-                if (newOperationIndex <= operationsLog.getLastIndex())
-                {
+                if (newOperationIndex <= operationsLog.getLastIndex()) {
                     //don't need to append
                     return new AnswerAppendDTO(raftNode.getId(), raftNode.getCurrentTerm(), true, operationsLog.getLastIndex());
                 }
-                log.info("Peer #{} Append new operation. {}. key:{} val:{}",
+                log.info("Узел {} сделал новую операцию: {}. key:{} val:{}",
                         raftNode.getId(), newOperation.getType(), newOperation.getEntry().getKey(),
                         newOperation.getEntry().getVal());
                 operationsLog.append(newOperation);
@@ -214,8 +208,8 @@ public class ReplicationService {
             raftNode.setCommitIndex(Math.min(dto.getLeaderCommit(), operationsLog.getLastIndex()));
         }
 
-        log.debug("Peer #{}. Success answer to {} request. Term: {}. Mach index {}", raftNode.getId(), opNameForLog,
-                raftNode.getCurrentTerm(), operationsLog.getLastIndex());
+//        log.info("Узел #{}. успешно ответил на {} запрос. Терм: {}. Индекс {}", raftNode.getId(), opNameForLog,
+//                raftNode.getCurrentTerm(), operationsLog.getLastIndex());
         return new AnswerAppendDTO(raftNode.getId(), raftNode.getCurrentTerm(), true, operationsLog.getLastIndex());
     }
 

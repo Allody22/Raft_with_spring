@@ -1,4 +1,4 @@
-package g.nsu.ru.server.services;
+package g.nsu.ru.server.model;
 
 
 import g.nsu.ru.server.model.operations.Operation;

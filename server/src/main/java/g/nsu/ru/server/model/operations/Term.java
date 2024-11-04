@@ -23,13 +23,13 @@ public class Term {
 
     public void setCurrentTerm(long currentTerm) {
         this.currentTerm.set(currentTerm);
-        log.info("Peer #{} Set term to {}", attributes.getId(),getCurrentTerm());
+        log.info("Узел #{} поставил терм в {}", attributes.getId(),getCurrentTerm());
     }
 
 
     public Long incCurrentTerm() {
         currentTerm.incrementAndGet();
-        log.info("Peer #{} Term incremented: {}",attributes.getId(), getCurrentTerm());
+        log.info("Узел #{} повысил терм до: {}",attributes.getId(), getCurrentTerm());
         return getCurrentTerm();
     }
 }

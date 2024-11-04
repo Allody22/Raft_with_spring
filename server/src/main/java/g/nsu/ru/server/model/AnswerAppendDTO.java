@@ -1,13 +1,15 @@
-package g.nsu.ru.server.services;
+package g.nsu.ru.server.model;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.springframework.http.HttpStatus;
 
 
-@Getter
+@Data
+@AllArgsConstructor
 public class AnswerAppendDTO {
 
     private  final Integer id;
@@ -21,7 +23,7 @@ public class AnswerAppendDTO {
     private final HttpStatus statusCode;
 
     @JsonCreator
-    AnswerAppendDTO(
+    public AnswerAppendDTO(
             @JsonProperty("id") Integer id,
             @JsonProperty("term") Long term,
             @JsonProperty("success")  Boolean success,
@@ -35,7 +37,7 @@ public class AnswerAppendDTO {
     }
 
 
-    AnswerAppendDTO(Integer id, HttpStatus statusCode) {
+    public AnswerAppendDTO(Integer id, HttpStatus statusCode) {
         this.id = id;
         this.statusCode = statusCode;
         this.term = null;

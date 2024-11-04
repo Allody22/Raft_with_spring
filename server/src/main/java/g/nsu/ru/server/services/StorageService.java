@@ -15,7 +15,7 @@ import java.util.List;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-class StorageService {
+public class StorageService {
 
     private final StorageInMemory storage;
 

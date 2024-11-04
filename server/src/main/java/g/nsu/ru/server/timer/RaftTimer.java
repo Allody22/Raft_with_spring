@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class RaftTimer {
 
     protected final Attributes attributes;
-    private final Timer timer = new Timer();
+    private Timer timer = new Timer();
 
     abstract protected Integer getTimeout();
     abstract protected String getActionName();
@@ -30,29 +30,40 @@ public abstract class RaftTimer {
     }
 
     public void reset() {
-        counter.set(0);
+        counter.set(0); // Сбросить счетчик
     }
 
 
+
+    //TODO когда запускает? С точностью в одинаковый интервал
     @PostConstruct
-    private void start() {
-
+    public void start() {
+        stop();
+        timer = new Timer();
         timer.schedule(new TimerTask() {
-
             @Override
             public void run() {
                 if (isRun()) {
-                    counter.addAndGet(100);
+                    counter.addAndGet(10);
                     if (counter.get() >= getTimeout()) {
                         counter.set(0);
                         getAction().run();
                     }
-                }else{
-                    log.debug("Timer is not running for action: {}", getActionName());
+                } else {
+                    log.debug("Время для таймера: {}", getActionName());
                     counter.set(0);
                 }
             }
-        }, 0, 100);
+        }, 0, 10); // 10 мс – интервал для проверки состояния
+//        log.info("Таймер '{}' запущен со временем {}", getActionName(), getTimeout());
+    }
 
+    // Метод для остановки таймера
+    public void stop() {
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
+//            log.info("Таймер '{}' остановлен", getActionName());
+        }
     }
 }
