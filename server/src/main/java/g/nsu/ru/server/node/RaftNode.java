@@ -57,9 +57,6 @@ public class RaftNode {
         return attributes.getActive();
     }
 
-    public void cancelIfNotActive() {
-        attributes.cancelIfNotActive();
-    }
 
     public State getState() {
         return attributes.getState();
@@ -67,14 +64,6 @@ public class RaftNode {
 
     public void setState(State state) {
         attributes.setState(state);
-    }
-
-    public void setLeaderId(Integer leaderId) {
-        attributes.setLeaderId(leaderId);
-    }
-
-    public Integer getLeaderId() {
-        return attributes.getLeaderId();
     }
 
     public Long getCurrentTerm() {

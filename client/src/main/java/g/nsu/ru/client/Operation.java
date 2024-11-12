@@ -1,13 +1,15 @@
 package g.nsu.ru.client;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@RequiredArgsConstructor
-@Getter
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class Operation {
-    private final Long term;
-    private final OperationType type;
-    private final Entry entry;
+    private Long term;
+    private OperationType type;
+    private Entry entry;
 }
 

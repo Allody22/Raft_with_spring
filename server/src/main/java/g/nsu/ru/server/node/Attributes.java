@@ -2,7 +2,6 @@ package g.nsu.ru.server.node;
 
 
 import g.nsu.ru.server.events.CommittedIndexChangedEvent;
-import g.nsu.ru.server.exceptions.NotActiveException;
 import g.nsu.ru.server.model.State;
 import lombok.Data;
 import lombok.Getter;
@@ -26,9 +25,6 @@ public class Attributes {
 
     @Getter
     private Integer id;
-
-    @Getter
-    private volatile Integer leaderId = null;
 
     @Getter
     Boolean active = true;
@@ -66,10 +62,6 @@ public class Attributes {
     }
 
 
-    public void setLeaderId(Integer leaderId) {
-        this.leaderId = leaderId;
-    }
-
     public Integer getCommitIndex() {
         return commitIndex.get();
     }
@@ -86,10 +78,5 @@ public class Attributes {
 
     public void incLastApplied() {
         log.info("Узел #{} добавленный новый индекс: {}", getId(), this.lastApplied.incrementAndGet());
-    }
-
-    public void cancelIfNotActive() {
-        if (!getActive())
-            throw new NotActiveException();
     }
 }

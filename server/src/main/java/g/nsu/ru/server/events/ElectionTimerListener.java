@@ -1,6 +1,7 @@
-package g.nsu.ru.server.timer;
+package g.nsu.ru.server.events;
 
 
+import g.nsu.ru.server.timer.ElectionTimer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;

@@ -10,6 +10,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -24,7 +26,6 @@ public class RaftClientController {
     private final List<String> knownNodes;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    private static final int MAX_REDIRECTS = 5;
 
     public RaftClientController(@Value("${raft.leader.url}") String leaderUrl,
                                 @Value("${raft.nodes}") List<String> knownNodes) {
@@ -38,18 +39,9 @@ public class RaftClientController {
     public ResponseEntity<StringResponse> put(@RequestBody PutRequest putRequest) {
         String jsonResponse = sendPutRequest(putRequest.getKey(), putRequest.getVal());
 
-        // Распарсить JSON и извлечь значение "result"
-        ObjectMapper objectMapper = new ObjectMapper();
-        String result;
-        try {
-            JsonNode jsonNode = objectMapper.readTree(jsonResponse);
-            result = jsonNode.get("result").asText();
-        } catch (Exception e) {
-            result = "Ошибка обработки ответа";
-        }
-
-        return ResponseEntity.status(HttpStatus.OK).body(new StringResponse(result));
+        return ResponseEntity.status(HttpStatus.OK).body(new StringResponse(jsonResponse));
     }
+
     @GetMapping("/get/{key}")
     public ResponseEntity<StringResponse> get(@PathVariable String key) {
         String jsonResponse = sendGetRequest(key);
@@ -74,11 +66,6 @@ public class RaftClientController {
     public ResponseEntity<List<Operation>> getAllLogs() {
         return ResponseEntity.ok().body(sendGetAllLogsRequest());
     }
-
-//    @GetMapping("/status")
-//    public Map<String, Object> status() {
-//        return sendStatusRequest();
-//    }
 
     @DeleteMapping("/remove/{key}")
     public ResponseEntity<StringResponse> remove(@PathVariable String key) {
@@ -112,7 +99,6 @@ public class RaftClientController {
 
     private List<Entry> sendGetAllRequest() {
         String response = handleRequest("/raft/getall", "GET");
-        log.info("response: {}", response);
         try {
             return objectMapper.readValue(response, new TypeReference<List<Entry>>() {
             });
@@ -123,9 +109,14 @@ public class RaftClientController {
     }
 
     private List<Operation> sendGetAllLogsRequest() {
-        String response = handleRequest("/raft/status", "GET");
+        String response = handleRequest("/raft/logs/get/all", "GET");
         try {
-            return objectMapper.readValue(response, new TypeReference<List<Operation>>() {});
+            if (!response.startsWith("[")) {
+                log.error("Ошибка обработки ответа get all logs: невалидный JSON: {}", response);
+                return new ArrayList<>();
+            }
+            return objectMapper.readValue(response, new TypeReference<List<Operation>>() {
+            });
         } catch (IOException e) {
             log.error("Ошибка обработки ответа get all logs: {}", e.getMessage());
             return new ArrayList<>();
@@ -155,11 +146,34 @@ public class RaftClientController {
         return handleRequest("/raft/put", "POST", entry);
     }
 
+    private String handleRequestKillLeader() {
+        String currentUrl = leaderUrl;
+
+        for (int i = 0; i < 2; i++) {
+            try {
+                String url = currentUrl + "/raft/kill-leader";
+                String response;
+
+                response = restTemplate.postForEntity(url, null, String.class).getBody();
+
+                leaderUrl = currentUrl;
+                return response != null ? response : "Запрос успешно обработан на " + leaderUrl;
+
+            } catch (Exception e) {
+                log.info("exception {}", e.getMessage());
+                var leaderId = e.getMessage();
+                currentUrl = "800" + leaderId;
+                leaderUrl = currentUrl;
+            }
+        }
+        log.info("leader is {}", leaderUrl);
+        return "Ошибка: Не удалось обработать запрос " + "/raft/kill-leader";
+    }
+
     private String handleRequest(String endpoint, String method, Entry entry) {
         String currentUrl = leaderUrl;
-        int redirectCount = 0;
 
-        while (redirectCount < MAX_REDIRECTS) {
+        for (int i = 0; i < knownNodes.size(); i++) {
             try {
                 String url = currentUrl + endpoint;
                 String response;
@@ -173,95 +187,93 @@ public class RaftClientController {
                     response = restTemplate.getForEntity(url, String.class).getBody();
                 }
 
-                leaderUrl = currentUrl;
-                return response != null ? response : "Запрос успешно обработан на " + leaderUrl;
-
-            } catch (Exception e) {
-                log.info("exception {}", e.getMessage());
-                String newLeaderUrl = findNextLeader(currentUrl);
-                if (newLeaderUrl != null && !newLeaderUrl.equals(currentUrl)) {
-                    currentUrl = newLeaderUrl;
-                    redirectCount++;
-                } else {
-                    break;
+                if (!Objects.equals(leaderUrl, currentUrl)) {
+                    leaderUrl = currentUrl;
+                    log.info("Лидер теперь это {}", leaderUrl);
                 }
+                return response != null ? response : "Запрос успешно обработан на " + leaderUrl;
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode() == HttpStatus.CONFLICT) {
+                    try {
+                        JsonNode jsonNode = objectMapper.readTree(e.getResponseBodyAsString());
+                        String leaderId = jsonNode.get("message").asText();
+                        log.info("Получен новый ID лидера: {}", leaderId);
+                        currentUrl = "http://localhost:800" + leaderId;
+                        leaderUrl = currentUrl;
+                    } catch (IOException jsonParseException) {
+                        log.error("Ошибка парсинга JSON из NotLeaderException: {}", jsonParseException.getMessage());
+                    }
+                } else if (e.getStatusCode() == HttpStatus.ALREADY_REPORTED) {
+                    log.info("У данного узла нет информации о лидере");
+                }
+            } catch (ResourceAccessException e) {
+                log.info("Узел {} недоступен: {}", currentUrl, e.getMessage());
+                if (i < knownNodes.size() - 1) {
+                    currentUrl = knownNodes.get(i + 1);
+                } else {
+                    log.error("Все известные узлы недоступны.");
+                }
+            } catch (Exception e) {
+                log.error("Неизвестная ошибка при запросе к {}: {}", currentUrl, e.getMessage());
+                break;
             }
         }
-        log.info("leader is {}", leaderUrl);
+
+        log.info("Лидер с ошибкой: {}", leaderUrl);
         return "Ошибка: Не удалось обработать запрос " + endpoint;
-    }
-
-    private String handleRequestKillLeader() {
-        String currentUrl = leaderUrl;
-        int redirectCount = 0;
-
-        while (redirectCount < MAX_REDIRECTS) {
-            try {
-                String url = currentUrl + "/raft/kill-leader";
-                String response;
-
-                response = restTemplate.postForEntity(url, null, String.class).getBody();
-
-                leaderUrl = currentUrl;
-                return response != null ? response : "Запрос успешно обработан на " + leaderUrl;
-
-            } catch (Exception e) {
-                // Обработка редиректа
-                log.info("exception {}", e.getMessage());
-                String newLeaderUrl = findNextLeader(currentUrl);
-                if (newLeaderUrl != null && !newLeaderUrl.equals(currentUrl)) {
-                    currentUrl = newLeaderUrl;
-                    redirectCount++;
-                } else {
-                    break;
-                }
-            }
-        }
-        log.info("leader is {}", leaderUrl);
-        return "Ошибка: Не удалось обработать запрос " + "/raft/kill-leader";
     }
 
     private String handleRequest(String endpoint, String method) {
         String currentUrl = leaderUrl;
-        int redirectCount = 0;
 
-        while (redirectCount < MAX_REDIRECTS) {
+        for (int i = 0; i < knownNodes.size(); i++) {
             try {
                 String url = currentUrl + endpoint;
                 String response;
 
-                // Определяем метод запроса и сохраняем результат
+                // Выполняем запрос в зависимости от метода
                 if ("POST".equals(method)) {
                     response = restTemplate.postForEntity(url, null, String.class).getBody();
                 } else {
                     response = restTemplate.getForEntity(url, String.class).getBody();
                 }
 
-                leaderUrl = currentUrl;
+                if (!Objects.equals(leaderUrl, currentUrl)) {
+                    leaderUrl = currentUrl;
+                    log.info("Лидер теперь это {}", leaderUrl);
+                }
                 return response != null ? response : "Запрос успешно обработан на " + leaderUrl;
 
-            } catch (Exception e) {
-                // Обработка редиректа
-                log.info("exception {}", e.getMessage());
-                String newLeaderUrl = findNextLeader(currentUrl);
-                if (newLeaderUrl != null && !newLeaderUrl.equals(currentUrl)) {
-                    currentUrl = newLeaderUrl;
-                    redirectCount++;
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode() == HttpStatus.CONFLICT) {
+                    try {
+                        JsonNode jsonNode = objectMapper.readTree(e.getResponseBodyAsString());
+                        String leaderId = jsonNode.get("message").asText();
+                        log.info("Получен новый ID лидера: {}", leaderId);
+                        currentUrl = "http://localhost:800" + leaderId;
+                        leaderUrl = currentUrl;
+                    } catch (IOException jsonParseException) {
+                        log.error("Ошибка парсинга JSON из NotLeaderException: {}", jsonParseException.getMessage());
+                    }
                 } else {
-                    break;
+                    log.error("Неожиданный статус ошибки: {} при запросе к {}", e.getStatusCode(), currentUrl);
                 }
+            } catch (ResourceAccessException e) {
+                log.info("Узел {} недоступен: {}", currentUrl, e.getMessage());
+                if (i < knownNodes.size() - 1) {
+                    currentUrl = knownNodes.get(i + 1);
+                } else {
+                    log.error("Все известные узлы недоступны.");
+                }
+            } catch (Exception e) {
+                log.error("Неизвестная ошибка при запросе к {}: {}", currentUrl, e.getMessage());
+                break;
             }
         }
-        log.info("leader is {}", leaderUrl);
+
+        log.info("Текущий лидер: {}", leaderUrl);
         return "Ошибка: Не удалось обработать запрос " + endpoint;
     }
 
 
-    private String findNextLeader(String currentUrl) {
-        int index = knownNodes.indexOf(currentUrl);
-        if (index != -1 && index + 1 < knownNodes.size()) {
-            return knownNodes.get(index + 1);
-        }
-        return knownNodes.get(0); // Переход к первому узлу, если достигнут конец списка
-    }
 }

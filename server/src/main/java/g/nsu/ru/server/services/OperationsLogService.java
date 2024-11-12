@@ -1,14 +1,13 @@
 package g.nsu.ru.server.services;
 
 
-import g.nsu.ru.server.events.OperationsLogAppendedEvent;
+import g.nsu.ru.server.exceptions.NoLeaderInformationException;
 import g.nsu.ru.server.exceptions.NotLeaderException;
 import g.nsu.ru.server.model.State;
 import g.nsu.ru.server.model.operations.*;
 import g.nsu.ru.server.node.Attributes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,16 +21,9 @@ public class OperationsLogService {
 
     private final OperationsLogInMemory operationsLog;
     private final Attributes attributes;
+    private final ReplicationService replicationService;
     private final Term term;
-    private final ApplicationEventPublisher applicationEventPublisher;
 
-    public String getLeaderUrl() {
-        Integer leaderId = attributes.getLeaderId();
-        if (leaderId != null) {
-            return "http://localhost:800" + leaderId;
-        }
-        throw new IllegalStateException("Лидер не определён");
-    }
 
     public void insert(Entry entry) {
         appendToLog(INSERT, entry);
@@ -55,24 +47,30 @@ public class OperationsLogService {
     }
 
     private void appendToLog(OperationType type, Entry entry) {
-        log.info("Узел #{} добавил новый лог. {}. key:{} val:{}", attributes.getId(),type,entry.getKey(),entry.getVal());
-        attributes.cancelIfNotActive();
         if (!attributes.getState().equals(State.LEADER)) {
-            throw new NotLeaderException();
+            if (attributes.getVotedFor() != null) {
+                throw new NotLeaderException(attributes.getVotedFor().toString());
+            }else {
+                throw new NoLeaderInformationException("Нет инфы");
+            }
         }
+        log.info("Узел #{} добавил новый лог. {}. key:{} val:{}", attributes.getId(),type,entry.getKey(),entry.getVal());
         Operation operation = new Operation(term.getCurrentTerm(), type, entry);
         operationsLog.append(operation);
-        applicationEventPublisher.publishEvent(new OperationsLogAppendedEvent(this));
+        replicationService.appendRequest();
     }
 
     public void deactivateLeader() {
         if (attributes.getState().equals(State.LEADER)) {
             log.info("Узел #{} больше не лидер, переводим его в фоловера.", attributes.getId());
             attributes.setState(State.FOLLOWER);
-            attributes.setLeaderId(null);
             attributes.setVotedFor(null);
         } else {
-            throw new NotLeaderException("Узел не является лидером и не может быть деактивирован таким образом.");
+            if (attributes.getVotedFor() != null) {
+                throw new NotLeaderException(attributes.getVotedFor().toString());
+            }else {
+                throw new NoLeaderInformationException("Нет инфы");
+            }
         }
     }
 

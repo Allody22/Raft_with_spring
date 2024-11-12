@@ -12,13 +12,13 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public class AnswerAppendDTO {
 
-    private  final Integer id;
+    private final Integer id;
 
-    private  final  Long term;
+    private final Long term;
 
-    private  final Boolean success;
+    private final Boolean success;
 
-    private  final Integer matchIndex;
+    private final Integer matchIndex;
 
     private final HttpStatus statusCode;
 
@@ -26,9 +26,8 @@ public class AnswerAppendDTO {
     public AnswerAppendDTO(
             @JsonProperty("id") Integer id,
             @JsonProperty("term") Long term,
-            @JsonProperty("success")  Boolean success,
-            @JsonProperty("matchIndex") Integer matchIndex)
-    {
+            @JsonProperty("success") Boolean success,
+            @JsonProperty("matchIndex") Integer matchIndex) {
         this.id = id;
         this.term = term;
         this.success = success;

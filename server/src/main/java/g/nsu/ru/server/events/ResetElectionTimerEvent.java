@@ -1,4 +1,4 @@
-package g.nsu.ru.server.timer;
+package g.nsu.ru.server.events;
 
 import org.springframework.context.ApplicationEvent;
 

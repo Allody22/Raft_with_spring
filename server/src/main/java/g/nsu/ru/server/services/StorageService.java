@@ -31,8 +31,6 @@ public class StorageService {
     }
 
     public void applyCommitted(){
-        log.debug("Peer #{} Trying to apply committed.LastApplied: {}, Commit Index: {} ", attributes.getId(), attributes.getLastApplied(),
-                  attributes.getCommitIndex());
         while (attributes.getLastApplied()< attributes.getCommitIndex())
         {
             apply(attributes.getCommitIndex());

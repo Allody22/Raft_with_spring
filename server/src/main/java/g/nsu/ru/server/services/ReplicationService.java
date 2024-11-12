@@ -1,12 +1,12 @@
 package g.nsu.ru.server.services;
 
+import g.nsu.ru.server.events.ResetElectionTimerEvent;
 import g.nsu.ru.server.model.AnswerAppendDTO;
 import g.nsu.ru.server.model.RequestAppendDTO;
 import g.nsu.ru.server.model.operations.Operation;
 import g.nsu.ru.server.model.operations.OperationsLogInMemory;
 import g.nsu.ru.server.node.Peer;
 import g.nsu.ru.server.node.RaftNode;
-import g.nsu.ru.server.timer.ResetElectionTimerEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -64,9 +64,6 @@ public class ReplicationService {
                 Operation operation;
                 Integer prevIndex;
                 if (peer.getNextIndex() <= operationsLog.getLastIndex()) {
-//                    opNameForLog = "Append";
-                    log.info("Узел #{} отправляет {} запрос узлу {}. Следующий индекс узла: {}. Последний индекс лога: {}",
-                            raftNode.getId(), opNameForLog, id, peer.getNextIndex(), operationsLog.getLastIndex());
                     operation = operationsLog.get(peer.getNextIndex());
                     prevIndex = peer.getNextIndex() - 1;
                 } else {
@@ -98,7 +95,6 @@ public class ReplicationService {
     }
 
     public void appendRequest() {
-//        log.debug("Узел #{} отправляет запросы", raftNode.getId());
         List<Integer> peersIds = raftNode.getPeers().stream().map(Peer::getId).collect(Collectors.toList());
 
         while (!peersIds.isEmpty()) { // Повторяем, пока не получены успешные ответы от всех узлов
@@ -112,16 +108,12 @@ public class ReplicationService {
                     }
                     Peer peer = raftNode.getPeer(answer.getId());
                     if (answer.getSuccess()) {
-//                        log.debug("Узел #{} получил \"успех запроса\" от узла {}", raftNode.getId(), answer.getId());
-//                        log.debug("Узел #{} устанавливает следующий индекс для узла {}: следующий: {} совпадающий: {}. Предыдущий совпадающий: {}",
-//                                raftNode.getId(), answer.getId(), answer.getMatchIndex() + 1, answer.getMatchIndex(), peer.getMatchIndex());
                         peer.setNextIndex(answer.getMatchIndex() + 1);
                         peer.setMatchIndex(answer.getMatchIndex());
+                        raftNode.setVotedFor(answer.getId());
                         if (peer.getNextIndex() <= operationsLog.getLastIndex())
                             peersIds.add(answer.getId());
                     } else {
-                        log.debug("Узел #{} запрос отклонен узлом {}, уменьшает текущий следующий индекс {}",
-                                raftNode.getId(), answer.getId(), peer.getNextIndex());
                         peer.decNextIndex();
                         peersIds.add(answer.getId());
                     }
@@ -151,16 +143,13 @@ public class ReplicationService {
 
 
     public AnswerAppendDTO append(RequestAppendDTO dto) {
-
-        raftNode.cancelIfNotActive();
-
         if (dto.getTerm() < raftNode.getCurrentTerm()) {
             log.info("Узел #{} отклонил запрос от {}. Терм {} меньше чем у узла {}", raftNode.getId(), dto.getLeaderId(),
                     dto.getTerm(), raftNode.getCurrentTerm());
             return new AnswerAppendDTO(raftNode.getId(), raftNode.getCurrentTerm(), false, null);
         } else if (dto.getTerm() > raftNode.getCurrentTerm()) {
             raftNode.setCurrentTerm(dto.getTerm());
-            raftNode.setVotedFor(null);
+            raftNode.setVotedFor(dto.getLeaderId());
         }
         applicationEventPublisher.publishEvent(new ResetElectionTimerEvent(this));
         // Если ты почему-то не фолловер, то ты им станешь
@@ -206,8 +195,6 @@ public class ReplicationService {
             raftNode.setCommitIndex(Math.min(dto.getLeaderCommit(), operationsLog.getLastIndex()));
         }
 
-//        log.info("Узел #{}. успешно ответил на {} запрос. Терм: {}. Индекс {}", raftNode.getId(), opNameForLog,
-//                raftNode.getCurrentTerm(), operationsLog.getLastIndex());
         return new AnswerAppendDTO(raftNode.getId(), raftNode.getCurrentTerm(), true, operationsLog.getLastIndex());
     }
 

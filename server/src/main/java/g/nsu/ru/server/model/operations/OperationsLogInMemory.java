@@ -20,8 +20,8 @@ public class OperationsLogInMemory {
 
     private final List<Operation> operationsLog = new ArrayList<>();
 
-    synchronized public void  append(Operation operation) {
-       operationsLog.add(operation);
+    synchronized public void append(Operation operation) {
+        operationsLog.add(operation);
     }
 
     public Operation get(Integer index) {
@@ -33,25 +33,23 @@ public class OperationsLogInMemory {
     }
 
     public Integer getLastIndex() {
-        return operationsLog.size()-1;
+        return operationsLog.size() - 1;
 
     }
 
     public Long getLastTerm() {
-
         Integer lastIndex = getLastIndex();
         if (lastIndex > EMPTY_LOG_LAST_INDEX) {
             return operationsLog.get(lastIndex).getTerm();
-        }
-        else
-          return 0L;
+        } else
+            return 0L;
     }
 
 
     synchronized public void removeAllFromIndex(int index) {
-        log.info("Peer #{} Remove operations from operations. From index {} to {}",attributes.getId(),index,operationsLog.size()-1);
+        log.info("Peer #{} Remove operations from operations. From index {} to {}", attributes.getId(), index, operationsLog.size() - 1);
 
-        int delta = operationsLog.size()-index;
+        int delta = operationsLog.size() - index;
         for (int i = 0; i < delta; i++) {
             operationsLog.remove(index);
         }
@@ -60,8 +58,7 @@ public class OperationsLogInMemory {
     public Long getTerm(Integer index) {
         if (index > EMPTY_LOG_LAST_INDEX) {
             return operationsLog.get(index).getTerm();
-        }
-        else
+        } else
             return 0L;
     }
 

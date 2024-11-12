@@ -141,7 +141,6 @@ public class ElectionService {
             log.info("\u001B[32mУзел {} стал ЛИДЕРОМ в терме {} с голосами {} \u001B[0m", raftNode.getId(), term, voteGrantedCount);
             raftNode.setState(LEADER);
 
-            raftNode.setLeaderId(raftNode.getId());
 
             electionTimer.stop();
             heartBeatTimer.start();
