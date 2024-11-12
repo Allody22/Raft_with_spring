@@ -33,9 +33,6 @@ public abstract class RaftTimer {
         counter.set(0); // Сбросить счетчик
     }
 
-
-
-    //TODO когда запускает? С точностью в одинаковый интервал
     @PostConstruct
     public void start() {
         stop();
@@ -58,7 +55,6 @@ public abstract class RaftTimer {
 //        log.info("Таймер '{}' запущен со временем {}", getActionName(), getTimeout());
     }
 
-    // Метод для остановки таймера
     public void stop() {
         if (timer != null) {
             timer.cancel();

@@ -1,11 +1,14 @@
 package g.nsu.ru.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,13 +35,34 @@ public class RaftClientController {
     }
 
     @PostMapping("/put")
-    public String put(@RequestBody PutRequest putRequest) {
-        return sendPutRequest(putRequest.getKey(), putRequest.getVal());
-    }
+    public ResponseEntity<StringResponse> put(@RequestBody PutRequest putRequest) {
+        String jsonResponse = sendPutRequest(putRequest.getKey(), putRequest.getVal());
 
+        // Распарсить JSON и извлечь значение "result"
+        ObjectMapper objectMapper = new ObjectMapper();
+        String result;
+        try {
+            JsonNode jsonNode = objectMapper.readTree(jsonResponse);
+            result = jsonNode.get("result").asText();
+        } catch (Exception e) {
+            result = "Ошибка обработки ответа";
+        }
+
+        return ResponseEntity.status(HttpStatus.OK).body(new StringResponse(result));
+    }
     @GetMapping("/get/{key}")
-    public String get(@PathVariable String key) {
-        return sendGetRequest(key);
+    public ResponseEntity<StringResponse> get(@PathVariable String key) {
+        String jsonResponse = sendGetRequest(key);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String result;
+        try {
+            JsonNode jsonNode = objectMapper.readTree(jsonResponse);
+            result = jsonNode.get("val").asText();
+        } catch (Exception e) {
+            result = "Ошибка обработки ответа";
+        }
+
+        return ResponseEntity.ok().body(new StringResponse(result));
     }
 
     @GetMapping("/getall")
@@ -46,27 +70,43 @@ public class RaftClientController {
         return sendGetAllRequest();
     }
 
-    @GetMapping("/status")
-    public Map<String, Object> status() {
-        return sendStatusRequest();
+    @GetMapping("/logs/get/all")
+    public ResponseEntity<List<Operation>> getAllLogs() {
+        return ResponseEntity.ok().body(sendGetAllLogsRequest());
     }
+
+//    @GetMapping("/status")
+//    public Map<String, Object> status() {
+//        return sendStatusRequest();
+//    }
 
     @DeleteMapping("/remove/{key}")
-    public String remove(@PathVariable String key) {
-        return sendDeleteRequest(key);
+    public ResponseEntity<StringResponse> remove(@PathVariable String key) {
+        String jsonResponse = sendDeleteRequest(key);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String result;
+        try {
+            JsonNode jsonNode = objectMapper.readTree(jsonResponse);
+            result = jsonNode.get("result").asText();
+        } catch (Exception e) {
+            result = "Ошибка обработки ответа";
+        }
+
+        return ResponseEntity.ok().body(new StringResponse(result));
     }
 
-    @PostMapping("/kill-leader")
-    public String killLeader() {
-        return killLeaderRequest();
-    }
+//    @PostMapping("/kill-leader")
+//    public String killLeader() {
+//        return killLeaderRequest();
+//    }
 
 //    private String sendPutRequest(String key, String value) {
 //        return handleRequest("/put?key=" + key + "&value=" + value, "POST");
 //    }
 
     private String sendGetRequest(String key) {
-        return handleRequest("/get/" + key, "GET");
+
+        return handleRequest("/raft/get/" + key, "GET");
     }
 
 
@@ -74,13 +114,23 @@ public class RaftClientController {
         String response = handleRequest("/raft/getall", "GET");
         log.info("response: {}", response);
         try {
-            return objectMapper.readValue(response, new TypeReference<List<Entry>>() {});
+            return objectMapper.readValue(response, new TypeReference<List<Entry>>() {
+            });
         } catch (IOException e) {
             log.error("Ошибка обработки ответа getAll: {}", e.getMessage());
             return new ArrayList<>();
         }
     }
 
+    private List<Operation> sendGetAllLogsRequest() {
+        String response = handleRequest("/raft/status", "GET");
+        try {
+            return objectMapper.readValue(response, new TypeReference<List<Operation>>() {});
+        } catch (IOException e) {
+            log.error("Ошибка обработки ответа get all logs: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
 
     private Map<String, Object> sendStatusRequest() {
         String response = handleRequest("/raft/status", "GET");
@@ -97,7 +147,7 @@ public class RaftClientController {
     }
 
     private String killLeaderRequest() {
-        return handleRequestKillLeader("/raft/kill-leader");
+        return handleRequestKillLeader();
     }
 
     private String sendPutRequest(Long key, String value) {
@@ -141,16 +191,16 @@ public class RaftClientController {
         return "Ошибка: Не удалось обработать запрос " + endpoint;
     }
 
-    private String handleRequestKillLeader(String endpoint) {
+    private String handleRequestKillLeader() {
         String currentUrl = leaderUrl;
         int redirectCount = 0;
 
         while (redirectCount < MAX_REDIRECTS) {
             try {
-                String url = currentUrl + endpoint;
+                String url = currentUrl + "/raft/kill-leader";
                 String response;
 
-                    response = restTemplate.postForEntity(url, null, String.class).getBody();
+                response = restTemplate.postForEntity(url, null, String.class).getBody();
 
                 leaderUrl = currentUrl;
                 return response != null ? response : "Запрос успешно обработан на " + leaderUrl;
@@ -168,7 +218,7 @@ public class RaftClientController {
             }
         }
         log.info("leader is {}", leaderUrl);
-        return "Ошибка: Не удалось обработать запрос " + endpoint;
+        return "Ошибка: Не удалось обработать запрос " + "/raft/kill-leader";
     }
 
     private String handleRequest(String endpoint, String method) {

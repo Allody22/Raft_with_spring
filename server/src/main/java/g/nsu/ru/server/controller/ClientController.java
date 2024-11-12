@@ -12,7 +12,7 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping(value = "/raft",produces = {MediaType.APPLICATION_JSON_VALUE})
+@RequestMapping(value = "/raft", produces = {MediaType.APPLICATION_JSON_VALUE})
 @RequiredArgsConstructor
 class ClientController {
 
@@ -22,12 +22,12 @@ class ClientController {
     private final StorageService storageService;
 
     @GetMapping("/getall")
-    public List<Entry> all(){
+    public List<Entry> all() {
         return storageService.all();
     }
 
     @GetMapping("/get/{key}")
-    public String get(@PathVariable Long key){
+    public String get(@PathVariable Long key) {
         return String.format("{\"val\":\"%s\"}", storageService.get(key));
     }
 
@@ -46,19 +46,19 @@ class ClientController {
 
 
     @PutMapping("update/{key}")
-    public String update(@PathVariable Long key, @RequestBody String val)  {
+    public String update(@PathVariable Long key, @RequestBody String val) {
         operationsLogService.update(key, val);
-        return  DONE;
+        return DONE;
     }
 
-    @DeleteMapping("delete/{key}")
-    public String delete(@PathVariable Long key)  {
+    @PostMapping("delete/{key}")
+    public String delete(@PathVariable Long key) {
         operationsLogService.delete(key);
-        return  DONE;
+        return DONE;
     }
 
     @GetMapping("/logs/get/all")
-    public List<Operation> getAllLogs(){
+    public List<Operation> getAllLogs() {
         return operationsLogService.all();
     }
 }

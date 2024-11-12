@@ -1,6 +1,5 @@
 package g.nsu.ru.client;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,9 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Entry {
+public class StringResponse {
 
-    private Long key;
-    private String val;
-
+    private String result;
 }

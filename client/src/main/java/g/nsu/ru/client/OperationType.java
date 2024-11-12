@@ -1,4 +1,4 @@
-package g.nsu.ru.server.model.operations;
+package g.nsu.ru.client;
 
 public enum OperationType {
     INSERT,

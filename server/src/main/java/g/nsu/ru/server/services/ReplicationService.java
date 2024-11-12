@@ -64,7 +64,7 @@ public class ReplicationService {
                 Operation operation;
                 Integer prevIndex;
                 if (peer.getNextIndex() <= operationsLog.getLastIndex()) {
-                    opNameForLog = "Append";
+//                    opNameForLog = "Append";
                     log.info("Узел #{} отправляет {} запрос узлу {}. Следующий индекс узла: {}. Последний индекс лога: {}",
                             raftNode.getId(), opNameForLog, id, peer.getNextIndex(), operationsLog.getLastIndex());
                     operation = operationsLog.get(peer.getNextIndex());
@@ -98,7 +98,7 @@ public class ReplicationService {
     }
 
     public void appendRequest() {
-        log.debug("Узел #{} отправляет запросы", raftNode.getId());
+//        log.debug("Узел #{} отправляет запросы", raftNode.getId());
         List<Integer> peersIds = raftNode.getPeers().stream().map(Peer::getId).collect(Collectors.toList());
 
         while (!peersIds.isEmpty()) { // Повторяем, пока не получены успешные ответы от всех узлов
@@ -112,9 +112,9 @@ public class ReplicationService {
                     }
                     Peer peer = raftNode.getPeer(answer.getId());
                     if (answer.getSuccess()) {
-                        log.debug("Узел #{} получил \"успех запроса\" от узла {}", raftNode.getId(), answer.getId());
-                        log.debug("Узел #{} устанавливает следующий индекс для узла {}: следующий: {} совпадающий: {}. Предыдущий совпадающий: {}",
-                                raftNode.getId(), answer.getId(), answer.getMatchIndex() + 1, answer.getMatchIndex(), peer.getMatchIndex());
+//                        log.debug("Узел #{} получил \"успех запроса\" от узла {}", raftNode.getId(), answer.getId());
+//                        log.debug("Узел #{} устанавливает следующий индекс для узла {}: следующий: {} совпадающий: {}. Предыдущий совпадающий: {}",
+//                                raftNode.getId(), answer.getId(), answer.getMatchIndex() + 1, answer.getMatchIndex(), peer.getMatchIndex());
                         peer.setNextIndex(answer.getMatchIndex() + 1);
                         peer.setMatchIndex(answer.getMatchIndex());
                         if (peer.getNextIndex() <= operationsLog.getLastIndex())
@@ -154,7 +154,6 @@ public class ReplicationService {
 
         raftNode.cancelIfNotActive();
 
-        // Reply false if term < currentTerm (§5.1)
         if (dto.getTerm() < raftNode.getCurrentTerm()) {
             log.info("Узел #{} отклонил запрос от {}. Терм {} меньше чем у узла {}", raftNode.getId(), dto.getLeaderId(),
                     dto.getTerm(), raftNode.getCurrentTerm());
@@ -166,7 +165,7 @@ public class ReplicationService {
         applicationEventPublisher.publishEvent(new ResetElectionTimerEvent(this));
         // Если ты почему-то не фолловер, то ты им станешь
         if (!raftNode.getState().equals(FOLLOWER)) {
-            log.info("\u001b[33mУзел {} в аппенде стал фолловером\u001b[om", raftNode.getId());
+            log.info("\u001b[33mУзел {} в аппенде стал фолловером\u001b[o", raftNode.getId());
             raftNode.setState(FOLLOWER);
         }
 
@@ -203,7 +202,6 @@ public class ReplicationService {
                 operationsLog.append(newOperation);
             }
         }
-//        5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
         if (dto.getLeaderCommit() > raftNode.getCommitIndex()) {
             raftNode.setCommitIndex(Math.min(dto.getLeaderCommit(), operationsLog.getLastIndex()));
         }
