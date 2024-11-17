@@ -57,7 +57,6 @@ public class RaftNode {
         return attributes.getActive();
     }
 
-
     public State getState() {
         return attributes.getState();
     }
@@ -94,12 +93,12 @@ public class RaftNode {
         return peers.getPeers();
     }
 
-    public Peer getPeer(Integer id)  {
-        return  peers.get(id);
+    public Peer getPeer(Integer id) {
+        return peers.get(id);
     }
 
     public Long incCurrentTerm() {
-       return term.incCurrentTerm();
+        return term.incCurrentTerm();
     }
 
     public void setCurrentTerm(Long term) {
@@ -115,7 +114,7 @@ public class RaftNode {
     }
 
     public Integer getVotedFor() {
-       return attributes.getVotedFor();
+        return attributes.getVotedFor();
     }
 
     public void setVotedFor(Integer votedFor) {
@@ -123,7 +122,7 @@ public class RaftNode {
     }
 
     public void setTermGreaterThenCurrent(Long term) {
-        log.info("Узел #{} получил терм {} больше чем текущий. текущий терм {}", getId(),term,getCurrentTerm());
+        log.info("Узел #{} получил терм {} больше чем текущий. текущий терм {}", getId(), term, getCurrentTerm());
         setState(FOLLOWER);
         setCurrentTerm(term);
         setVotedFor(null);

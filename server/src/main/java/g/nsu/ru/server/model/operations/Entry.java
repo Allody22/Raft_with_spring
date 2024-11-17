@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 public class Entry {
 
-    private final Long key;
-    private final String val;
+    private final String key;
+    private final Object val;
 
 }

@@ -29,11 +29,11 @@ public class OperationsLogService {
         appendToLog(INSERT, entry);
     }
 
-    public void update(Long key, String val) {
+    public void update(String key, Object val) {
         appendToLog(UPDATE, new Entry(key, val));
     }
 
-    public void delete(Long key) {
+    public void delete(String key) {
         appendToLog(DELETE, new Entry(key, null));
     }
 
@@ -41,37 +41,17 @@ public class OperationsLogService {
         return operationsLog.all();
     }
 
-
-    public List<Operation> allValues() {
-        return operationsLog.all();
-    }
-
     private void appendToLog(OperationType type, Entry entry) {
         if (!attributes.getState().equals(State.LEADER)) {
             if (attributes.getVotedFor() != null) {
                 throw new NotLeaderException(attributes.getVotedFor().toString());
-            }else {
+            } else {
                 throw new NoLeaderInformationException("Нет инфы");
             }
         }
-        log.info("Узел #{} добавил новый лог. {}. key:{} val:{}", attributes.getId(),type,entry.getKey(),entry.getVal());
+        log.info("Узел #{} добавил новый лог. {}. key:{} val:{}", attributes.getId(), type, entry.getKey(), entry.getVal());
         Operation operation = new Operation(term.getCurrentTerm(), type, entry);
         operationsLog.append(operation);
         replicationService.appendRequest();
     }
-
-    public void deactivateLeader() {
-        if (attributes.getState().equals(State.LEADER)) {
-            log.info("Узел #{} больше не лидер, переводим его в фоловера.", attributes.getId());
-            attributes.setState(State.FOLLOWER);
-            attributes.setVotedFor(null);
-        } else {
-            if (attributes.getVotedFor() != null) {
-                throw new NotLeaderException(attributes.getVotedFor().toString());
-            }else {
-                throw new NoLeaderInformationException("Нет инфы");
-            }
-        }
-    }
-
 }

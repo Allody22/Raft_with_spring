@@ -16,20 +16,18 @@ public class Term {
     private final AtomicLong currentTerm = new AtomicLong(0L);
     private final Attributes attributes;
 
-
     public Long getCurrentTerm() {
         return currentTerm.get();
     }
 
     public void setCurrentTerm(long currentTerm) {
         this.currentTerm.set(currentTerm);
-        log.info("Узел #{} поставил терм в {}", attributes.getId(),getCurrentTerm());
+        log.info("Узел #{} поставил терм в {}", attributes.getId(), getCurrentTerm());
     }
-
 
     public Long incCurrentTerm() {
         currentTerm.incrementAndGet();
-        log.info("Узел #{} повысил терм до: {}",attributes.getId(), getCurrentTerm());
+        log.info("Узел #{} повысил терм до: {}", attributes.getId(), getCurrentTerm());
         return getCurrentTerm();
     }
 }

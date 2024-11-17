@@ -12,9 +12,9 @@ public class Peer {
 
     final Integer id;
 
-    private final AtomicInteger nextIndex= new AtomicInteger(0);
-    private final AtomicInteger matchIndex= new AtomicInteger(-1);
-    private final AtomicBoolean voteGranted=new AtomicBoolean(false);
+    private final AtomicInteger nextIndex = new AtomicInteger(0);
+    private final AtomicInteger matchIndex = new AtomicInteger(-1);
+    private final AtomicBoolean voteGranted = new AtomicBoolean(false);
 
     public Integer getId() {
         return this.id;

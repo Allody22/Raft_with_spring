@@ -27,16 +27,10 @@ class ClientController {
     }
 
     @GetMapping("/get/{key}")
-    public String get(@PathVariable Long key) {
-        return String.format("{\"val\":\"%s\"}", storageService.get(key));
+    public String get(@PathVariable String key) {
+        return String.format("{\"val\":\"%s\"}", storageService.get(key).toString());
     }
 
-
-    @PostMapping("/kill-leader")
-    public String killLeader() {
-        operationsLogService.deactivateLeader();
-        return DONE;
-    }
 
     @PostMapping("/put")
     public String update(@RequestBody Entry entry) {
@@ -46,13 +40,13 @@ class ClientController {
 
 
     @PutMapping("update/{key}")
-    public String update(@PathVariable Long key, @RequestBody String val) {
+    public String update(@PathVariable String key, @RequestBody Object val) {
         operationsLogService.update(key, val);
         return DONE;
     }
 
     @PostMapping("delete/{key}")
-    public String delete(@PathVariable Long key) {
+    public String delete(@PathVariable String key) {
         operationsLogService.delete(key);
         return DONE;
     }

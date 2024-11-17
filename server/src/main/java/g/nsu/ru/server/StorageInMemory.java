@@ -14,24 +14,24 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class StorageInMemory {
-    private final Map<Long,String> map = new ConcurrentHashMap<>();
+    private final Map<String,Object> map = new ConcurrentHashMap<>();
 
 
-    public String get(Long key) {
+    public Object get(String key) {
         return map.get(key);
     }
 
-    public void insert(Long key,
-                       String val) {
+    public void insert(String key,
+                       Object val) {
         map.put(key,val);
     }
 
-    public void update(Long key,
-                       String val) {
+    public void update(String key,
+                       Object val) {
         map.put(key,val);
     }
 
-    public void delete(Long key) {
+    public void delete(String key) {
         map.remove(key);
     }
 

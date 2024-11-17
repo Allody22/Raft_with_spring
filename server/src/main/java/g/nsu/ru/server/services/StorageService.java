@@ -22,7 +22,7 @@ public class StorageService {
     private final Attributes attributes;
     private final OperationsLogInMemory operationsLog;
 
-    public String get(Long id) {
+    public Object get(String id) {
         return storage.get(id);
     }
 

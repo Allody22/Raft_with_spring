@@ -15,7 +15,9 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/raft")
@@ -82,20 +84,10 @@ public class RaftClientController {
         return ResponseEntity.ok().body(new StringResponse(result));
     }
 
-//    @PostMapping("/kill-leader")
-//    public String killLeader() {
-//        return killLeaderRequest();
-//    }
-
-//    private String sendPutRequest(String key, String value) {
-//        return handleRequest("/put?key=" + key + "&value=" + value, "POST");
-//    }
 
     private String sendGetRequest(String key) {
-
         return handleRequest("/raft/get/" + key, "GET");
     }
-
 
     private List<Entry> sendGetAllRequest() {
         String response = handleRequest("/raft/getall", "GET");
@@ -123,51 +115,13 @@ public class RaftClientController {
         }
     }
 
-    private Map<String, Object> sendStatusRequest() {
-        String response = handleRequest("/raft/status", "GET");
-        try {
-            return objectMapper.readValue(response, HashMap.class);
-        } catch (IOException e) {
-            log.error("Ошибка обработки ответа status: {}", e.getMessage());
-            return Collections.emptyMap();
-        }
-    }
-
     private String sendDeleteRequest(String key) {
         return handleRequest("/raft/delete/" + key, "POST");
     }
 
-    private String killLeaderRequest() {
-        return handleRequestKillLeader();
-    }
-
-    private String sendPutRequest(Long key, String value) {
+    private String sendPutRequest(String key, Object value) {
         Entry entry = new Entry(key, value);
         return handleRequest("/raft/put", "POST", entry);
-    }
-
-    private String handleRequestKillLeader() {
-        String currentUrl = leaderUrl;
-
-        for (int i = 0; i < 2; i++) {
-            try {
-                String url = currentUrl + "/raft/kill-leader";
-                String response;
-
-                response = restTemplate.postForEntity(url, null, String.class).getBody();
-
-                leaderUrl = currentUrl;
-                return response != null ? response : "Запрос успешно обработан на " + leaderUrl;
-
-            } catch (Exception e) {
-                log.info("exception {}", e.getMessage());
-                var leaderId = e.getMessage();
-                currentUrl = "800" + leaderId;
-                leaderUrl = currentUrl;
-            }
-        }
-        log.info("leader is {}", leaderUrl);
-        return "Ошибка: Не удалось обработать запрос " + "/raft/kill-leader";
     }
 
     private String handleRequest(String endpoint, String method, Entry entry) {
@@ -274,6 +228,5 @@ public class RaftClientController {
         log.info("Текущий лидер: {}", leaderUrl);
         return "Ошибка: Не удалось обработать запрос " + endpoint;
     }
-
 
 }

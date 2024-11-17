@@ -13,7 +13,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class Peers {
 
-
     private Integer quorum;
 
     private final List<Peer> peers = new ArrayList<>();
@@ -21,7 +20,6 @@ public class Peers {
     public void add(Integer id) {
         peers.add(new Peer(id));
     }
-
 
     public Peer get(Integer id) {
         return peers.stream().
@@ -32,6 +30,6 @@ public class Peers {
 
     public void initQuorum() {
         this.quorum = (int) Math.floor((double) (peers.size() + 1) / 2) + 1;
-     }
+    }
 
 }

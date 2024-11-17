@@ -27,7 +27,7 @@ class ReplicationController {
     public AnswerAppendDTO appendRequest(@RequestBody RequestAppendDTO requestAppendDTO,
                                          BindingResult bindingResult) throws BindException {
         if (bindingResult.hasErrors()) {
-            log.error("Какой-то пайндинг еррор {}", bindingResult.getAllErrors());
+            log.error("Какой-то байндинг еррор {}", bindingResult.getAllErrors());
             throw new BindException(bindingResult);
         }
         return replicationService.append(requestAppendDTO);

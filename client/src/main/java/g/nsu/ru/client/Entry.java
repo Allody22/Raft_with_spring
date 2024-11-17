@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Entry {
 
-    private Long key;
-    private String val;
+    private String key;
+    private Object val;
 
 }

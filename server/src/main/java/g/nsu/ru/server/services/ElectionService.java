@@ -132,7 +132,6 @@ public class ElectionService {
     }
 
     private boolean checkCurrentElectionStatus(Long term) {
-        //        return term.equals(raftNode.getCurrentTerm());
         return term.equals(raftNode.getCurrentTerm()) && raftNode.getState().equals(CANDIDATE);
     }
 
@@ -161,7 +160,6 @@ public class ElectionService {
     }
 
     public AnswerVoteDTO vote(RequestVoteDTO dto) {
-        //        raftNode.cancelIfNotActive();
         log.info("Узел {} получил запрос на голосование от Узла {} с термом {}. Текущий терм: {}. Текущий статус {}",
                 raftNode.getId(),
                 dto.getCandidateId(),
@@ -180,16 +178,6 @@ public class ElectionService {
         } else {
             termCheck = (raftNode.getVotedFor() == null || raftNode.getVotedFor().equals(dto.getCandidateId()));
         }
-
-
-        //        if ((operationsLog.getLastTerm() > dto.getLastLogTerm())
-        //                || operationsLog.getLastTerm().equals(dto.getLastLogTerm())) {
-        //            if (operationsLog.getLastIndex() > dto.getLastLogIndex()){
-        //                logCheckMy = true;
-        //            }
-        //        } else {
-        //            logCheckMy = false;
-        //        }
         boolean logCheck = !((operationsLog.getLastTerm() > dto.getLastLogTerm()) ||
                 ((operationsLog.getLastTerm().equals(dto.getLastLogTerm())) &&
                         (operationsLog.getLastIndex() > dto.getLastLogIndex())));
@@ -218,6 +206,5 @@ public class ElectionService {
 
         return restTemplate.postForEntity(url, requestEntity, AnswerVoteDTO.class);
     }
-
 
 }

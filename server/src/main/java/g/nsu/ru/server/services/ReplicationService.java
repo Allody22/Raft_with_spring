@@ -50,13 +50,13 @@ public class ReplicationService {
         return CompletableFuture.allOf(
                 answerFutureList.toArray(new CompletableFuture[0])
         ).thenApply(v ->
+                //Вызываем блокировку через join и ждём пока все фьючер таски завершатся
                 answerFutureList.stream().map(CompletableFuture::join).collect(Collectors.toList())
         ).join();
     }
 
     private CompletableFuture<AnswerAppendDTO> sendAppendForOnePeer(Integer id) {
         return CompletableFuture.supplyAsync(() -> {
-            String opNameForLog = "Heartbeat";
             try {
 
                 Peer peer = raftNode.getPeer(id);
@@ -68,7 +68,6 @@ public class ReplicationService {
                     prevIndex = peer.getNextIndex() - 1;
                 } else {
                     operation = null;
-                    log.debug("Узел #{} отправляет {} запрос узлу {}", raftNode.getId(), opNameForLog, id);
                     prevIndex = operationsLog.getLastIndex();
                 }
 
@@ -88,7 +87,7 @@ public class ReplicationService {
 //                log.error("Узел #{} ошибка {} запроса узлу {}. {} {}", raftNode.getId(), opNameForLog, id, e.getClass(), e.getMessage());
                 return new AnswerAppendDTO(id, SERVICE_UNAVAILABLE);
             } catch (Exception e) {
-//                log.error(String.format("Узел # %d ошибка %s запроса узлу %d", raftNode.getId(), opNameForLog, id), e);
+//                log.error(String.format("Узел %d ошибка %s запроса узлу %d", raftNode.getId(), opNameForLog, id), e);
                 return new AnswerAppendDTO(id, INTERNAL_SERVER_ERROR);
             }
         });
@@ -97,7 +96,7 @@ public class ReplicationService {
     public void appendRequest() {
         List<Integer> peersIds = raftNode.getPeers().stream().map(Peer::getId).collect(Collectors.toList());
 
-        while (!peersIds.isEmpty()) { // Повторяем, пока не получены успешные ответы от всех узлов
+        while (!peersIds.isEmpty()) {
             List<AnswerAppendDTO> answers = sendAppendToAllPeers(peersIds);
             peersIds = new ArrayList<>();
             for (AnswerAppendDTO answer : answers) {
@@ -124,7 +123,6 @@ public class ReplicationService {
     }
 
     private void tryToCommit() {
-        log.debug("Узел #{} пытается зафиксировать операцию. Текущий индекс : {}", raftNode.getId(), raftNode.getCommitIndex());
         while (true) {
             int N = raftNode.getCommitIndex() + 1;
 

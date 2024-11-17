@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PutRequest {
 
-    private Long key;
+    private String key;
 
-    private String val;
+    private Object val;
 }
