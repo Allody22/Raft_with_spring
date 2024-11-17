@@ -7,9 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class PutRequest {
+public class StringResponse {
 
-    private String key;
-
-    private Object val;
+    private String result;
 }

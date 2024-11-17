@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class PutRequest {
-
-    private String key;
-
-    private Object val;
+public class Operation {
+    private Long term;
+    private OperationType type;
+    private Entry entry;
 }
+

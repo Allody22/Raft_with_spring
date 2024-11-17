@@ -1,5 +1,6 @@
 package g.nsu.ru.client;
 
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,9 +8,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class PutRequest {
+public class Entry {
 
     private String key;
-
     private Object val;
+
 }
