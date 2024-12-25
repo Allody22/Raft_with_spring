@@ -5,12 +5,14 @@ import g.nsu.ru.server.model.operations.Operation;
 import g.nsu.ru.server.services.OperationsLogService;
 import g.nsu.ru.server.services.StorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 
+@Slf4j
 @RestController
 @RequestMapping(value = "/raft", produces = {MediaType.APPLICATION_JSON_VALUE})
 @RequiredArgsConstructor
@@ -36,6 +38,11 @@ class ClientController {
     public String update(@RequestBody Entry entry) {
         operationsLogService.insert(entry);
         return DONE;
+    }
+
+    @PostMapping("/compareAndSwap")
+    public Boolean compareAndSwap(@RequestBody CompareAndSwapRequest request) {
+        return operationsLogService.compareAndSwap(request.getKey(), request.getExpectedValue(), request.getNewValue());
     }
 
 
