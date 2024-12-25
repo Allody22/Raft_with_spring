@@ -44,6 +44,13 @@ public class RaftClientController {
         return ResponseEntity.status(HttpStatus.OK).body(new StringResponse(jsonResponse));
     }
 
+    @PostMapping("/compareAndSwap")
+    public ResponseEntity<Boolean> sendCompareAndSwapRequest(@RequestBody CompareAndSwapRequest request) {
+        String endpoint = "/raft/compareAndSwap";
+        return ResponseEntity.ok().body(handleCompareAndSwapRequest(endpoint, request));
+    }
+
+
     @GetMapping("/get/{key}")
     public ResponseEntity<StringResponse> get(@PathVariable String key) {
         String jsonResponse = sendGetRequest(key);
@@ -99,6 +106,66 @@ public class RaftClientController {
             return new ArrayList<>();
         }
     }
+
+    private Boolean handleCompareAndSwapRequest(String endpoint, CompareAndSwapRequest request) {
+        String currentUrl = leaderUrl;
+        for (int i = 0; i < knownNodes.size(); i++) {
+            try {
+                String url = currentUrl + endpoint;
+                ResponseEntity<Boolean> response = restTemplate.postForEntity(url, request, Boolean.class);
+
+                if (!Objects.equals(leaderUrl, currentUrl)) {
+                    leaderUrl = currentUrl;
+                    log.info("Лидер теперь это {}", leaderUrl);
+                }
+                return response.getBody();
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode() == HttpStatus.CONFLICT) {
+                    try {
+                        JsonNode jsonNode = objectMapper.readTree(e.getResponseBodyAsString());
+                        String leaderId = jsonNode.get("message").asText();
+                        log.info("Получен новый ID лидера: {}", leaderId);
+                        currentUrl = "http://localhost:800" + leaderId;
+                        leaderUrl = currentUrl;
+                    } catch (IOException jsonParseException) {
+                        log.error("Ошибка парсинга JSON из NotLeaderException: {}", jsonParseException.getMessage());
+                        if (i < knownNodes.size() - 1) {
+                            currentUrl = knownNodes.get(i + 1);
+                        } else {
+                            log.error("Все известные узлы недоступны.");
+                            break;
+                        }
+                    }
+                } else if (e.getStatusCode() == HttpStatus.ALREADY_REPORTED) {
+                    log.info("У данного узла нет информации о лидере");
+                    if (i < knownNodes.size() - 1) {
+                        currentUrl = knownNodes.get(i + 1);
+                    } else {
+                        log.error("Все известные узлы недоступны.");
+                        break;
+                    }
+                } else {
+                    log.error("Неожиданный статус ошибки: {} при запросе к {}", e.getStatusCode(), currentUrl);
+                    break;
+                }
+            } catch (ResourceAccessException e) {
+                log.info("Узел {} недоступен: {}", currentUrl, e.getMessage());
+                if (i < knownNodes.size() - 1) {
+                    currentUrl = knownNodes.get(i + 1);
+                } else {
+                    log.error("Все известные узлы недоступны.");
+                    break;
+                }
+            } catch (Exception e) {
+                log.error("Неизвестная ошибка при запросе к {}: {}", currentUrl, e.getMessage());
+                break;
+            }
+        }
+
+        log.info("Текущий лидер: {}", leaderUrl);
+        return false;
+    }
+
 
     private List<Operation> sendGetAllLogsRequest() {
         String response = handleRequest("/raft/logs/get/all", "GET");

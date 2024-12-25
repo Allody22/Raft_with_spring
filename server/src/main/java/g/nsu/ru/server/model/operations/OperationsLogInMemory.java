@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @Slf4j
@@ -17,10 +20,17 @@ public class OperationsLogInMemory {
 
     private final Attributes attributes;
 
-
     private final List<Operation> operationsLog = new ArrayList<>();
 
-    synchronized public void append(Operation operation) {
+    private final Map<Integer, CompletableFuture<Boolean>> operationResults = new ConcurrentHashMap<>();
+
+    public synchronized void append(Operation operation, CompletableFuture<Boolean> resultFuture) {
+        operationsLog.add(operation);
+        int index = operationsLog.size() - 1;
+        operationResults.put(index, resultFuture);
+    }
+
+    public synchronized void append(Operation operation) {
         operationsLog.add(operation);
     }
 
@@ -34,19 +44,18 @@ public class OperationsLogInMemory {
 
     public Integer getLastIndex() {
         return operationsLog.size() - 1;
-
     }
 
     public Long getLastTerm() {
         Integer lastIndex = getLastIndex();
         if (lastIndex > EMPTY_LOG_LAST_INDEX) {
             return operationsLog.get(lastIndex).getTerm();
-        } else
+        } else {
             return 0L;
+        }
     }
 
-
-    synchronized public void removeAllFromIndex(int index) {
+    public synchronized void removeAllFromIndex(int index) {
         log.info("Peer #{} Remove operations from operations. From index {} to {}", attributes.getId(), index, operationsLog.size() - 1);
 
         int delta = operationsLog.size() - index;
@@ -58,9 +67,12 @@ public class OperationsLogInMemory {
     public Long getTerm(Integer index) {
         if (index > EMPTY_LOG_LAST_INDEX) {
             return operationsLog.get(index).getTerm();
-        } else
+        } else {
             return 0L;
+        }
     }
 
-
+    public CompletableFuture<Boolean> getResultFuture(int index) {
+        return operationResults.remove(index);
+    }
 }
